@@ -1,6 +1,6 @@
 # vps
 
-> centos 7
+> centos 7+
 
 ## ready
 
@@ -18,6 +18,7 @@ ldconfig
 
 ## config
 
+* shadowsocks
 ```shell
 cd /etc
 mkdir shadowsocks && cd shadowsocks
@@ -25,7 +26,14 @@ touch ss.json
 vim ss.json
 ```
 
-* ss.json
+* bbr
+```shell
+wget --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && ./bbr.sh
+uname -r
+# linux 内核 版本大于 4.19
+```
+
+ss.json
 
 ```json
 {
@@ -54,9 +62,3 @@ ssserver -c /etc/shadowsocks/ss.json -d stop
 ssserver -c /etc/shadowsocks/ss.json -d restart
 ```
 
-* bbr
-```shell
-wget --no-check-certificate https://github.com/teddysun/across/raw/master/bbr.sh && chmod +x bbr.sh && ./bbr.sh
-uname -r
-# linux 内核 版本大于 4.19
-```
