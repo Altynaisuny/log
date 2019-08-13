@@ -24,13 +24,13 @@
 ```
 * 3.application.yml
 ```yml
-    spring:
-      datasource:
-        url: jdbc:mysql://localhost:3306/sas
-        username: root
-        password: mysql
-        driver-class-name: com.mysql.jdbc.Driver
-        #type: com.zaxxer.hikari.HikariDataSource
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/sas
+    username: root
+    password: mysql
+    driver-class-name: com.mysql.jdbc.Driver
+    #type: com.zaxxer.hikari.HikariDataSource
 ```
 默认采用HikariDataSource 连接池
 代码如下：
