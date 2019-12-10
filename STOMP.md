@@ -48,26 +48,28 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 Upgrade: websocket
 Connection: Upgrade
 Sec-WebSocket-Key: xqBt3ImNzJbYqRINxEFlkg==
-	
+## 握手拦截器
+implements HandshakeInterceptor 
+override `beforeHandshake` `afterHandshake`
+
 
 ## 消息体
+STOMP在WebSocket之上提供了一个基于帧的线路格式
+
 * 订阅
 
 ``` json
-{
-    SUBSCRIBE-id:sub-0
-	destination:/topic/kafka
-}
+>>>MESSAGE
+SUBSCRIBE-id:sub-0
+destination:/topic/kafka
 ```
 *  主动拉取
 ```json
-{
-    SEND 
-    	name:test
-    destination:/app/greetings
-    content-length:15
-    	测试发送。。。
-}
+>>> SEND
+transaction:tx-0
+destination:/app/marco
+content-length:20
+{"message":"Marco!"}
 ```
 
 ## 前端
