@@ -157,11 +157,16 @@ public void execute(Runnable command) {
         c = ctl.get();
     }
     //大于核心线程数
+    //线程池是running，先放进阻塞队列，如果放入成功，返回true，否则false
     if (isRunning(c) && workQueue.offer(command)) {
+        //再次检查线程池状态
         int recheck = ctl.get();
+        //如果线程池处于非运行状态，则从阻塞队列中删除刚才放入的线程任务，如果成功移除了task，进入if
+        //这个判断写的真好！！！&&运算符号的短路功能用的十分好，并且融合了逻辑。
         if (! isRunning(recheck) && remove(command))
             //拒绝策略
             reject(command);
+        //线程池处于运行状态，并且线程池中线程数为0，作为核心线程，addworker
         else if (workerCountOf(recheck) == 0)
             //放入任务
             addWorker(null, false);
