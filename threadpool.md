@@ -262,7 +262,8 @@ public ArrayBlockingQueue(int capacity, boolean fair) {
 public ArrayBlockingQueue(int capacity, boolean fair,
                               Collection<? extends E> c) {
     this(capacity, fair);
-
+	//调用 重入锁
+    //此处使用了ReentrantLock，JDK中的独占锁，除了synchronized，还有ReentrantLock。
     final ReentrantLock lock = this.lock;
     lock.lock(); // Lock only for visibility, not mutual exclusion
     try {
@@ -325,8 +326,17 @@ public boolean offer(E e, long timeout, TimeUnit unit)
 
 放入线程池中，线程池执行的过程也是一个队列  FIFO  先进先出
 
+@param firestTask 
+
+the task the new thread should run first (or null if none)
+
+@param core 
+
+core if true use corePoolSize as bound else maximumPoolSize.
+
 ```java
 private boolean addWorker(Runnable firstTask, boolean core) {
+    //retry这个关键词很少用到，这里是标记一个循环，类似goto
     retry:
     for (;;) {
         //当前线程池状态
@@ -345,53 +355,77 @@ private boolean addWorker(Runnable firstTask, boolean core) {
             return false;
 
         for (;;) {
+            //当前线程数是否不大于核心线程数或者最大线程数。
             int wc = workerCountOf(c);
             if (wc >= CAPACITY ||
                 wc >= (core ? corePoolSize : maximumPoolSize))
+                //addWorkers失败
                 return false;
+            //Attempts to CAS-increment the workerCount field of ctl.
+            //执行CAS的递增过程，增加workerCount。AtomicInteger
             if (compareAndIncrementWorkerCount(c))
+                //跳出retry
                 break retry;
+            //这里有个重复确认，重新获取当前线程池的状态。
             c = ctl.get();  // Re-read ctl
+            //在当前添加task的过程中，线程池的状态发生了改变。
             if (runStateOf(c) != rs)
+                //从标记retry的地方再次执行
                 continue retry;
             // else CAS failed due to workerCount change; retry inner loop
         }
     }
-
+	//此位置表示CAS成功，workCount + 1
+    //任务是否成功启动
     boolean workerStarted = false;
+    //任务是否添加成功
     boolean workerAdded = false;
     Worker w = null;
     try {
+        //构造work
         w = new Worker(firstTask);
+        //worker中的thread属性
         final Thread t = w.thread;
         if (t != null) {
+            //加锁 可重入锁
             final ReentrantLock mainLock = this.mainLock;
             mainLock.lock();
             try {
                 // Recheck while holding lock.
                 // Back out on ThreadFactory failure or if
                 // shut down before lock acquired.
+                //持有锁时再次检测。在ThreadFactory错误或者关闭（获得锁之前）时，执行退回
                 int rs = runStateOf(ctl.get());
 
                 if (rs < SHUTDOWN ||
                     (rs == SHUTDOWN && firstTask == null)) {
-                    if (t.isAlive()) // precheck that t is startable
+                    //线程是否存活，
+                    if (t.isAlive()) 
+                        // precheck that t is startable
+                        //线程已经启动，并且没有死掉，抛出异常
                         throw new IllegalThreadStateException();
+                    //把work加入workers中
                     workers.add(w);
                     int s = workers.size();
+                    //线程池中的线程数大于最大线程数，更新最大线程数
                     if (s > largestPoolSize)
                         largestPoolSize = s;
+                    //任务已经成功添加
                     workerAdded = true;
                 }
             } finally {
+                //解锁
                 mainLock.unlock();
             }
             if (workerAdded) {
+                //任务添加成功，运行该任务
                 t.start();
+                //改变标示
                 workerStarted = true;
             }
         }
     } finally {
+        //任务没有启动成功，从workers中移除该worker,该过程也是需要加锁的
         if (! workerStarted)
             addWorkerFailed(w);
     }
@@ -399,3 +433,15 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 }
 ```
 
+workers 
+
+```java
+private final HashSet<Worker> workers = new HashSet<Worker>();
+```
+
+thinking：
+
+什么样的worker是可以被放在workers中
+
+* 线程池处于RUNNING 或者 （线程池==shutdown并且worker ==null)
+* worker is not alive 。这里有点不懂==
