@@ -149,12 +149,119 @@ public Resource getResource(String location) {
 ### BeanDefinitionReader
 
 ### BeanDefinitionRegistry
+Bean的注册过程，接口org.springframework.beans.factory.support.BeanDefinitionRegistry：
+```java
+void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
+    throws BeanDefinitionStoreException;
+```
+
+实现类：org.springframework.beans.factory.support.DefaultListableBeanFactory
+
+```java
+//---------------------------------------------------------------------
+// Implementation of BeanDefinitionRegistry interface
+//---------------------------------------------------------------------
+
+@Override
+public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
+    throws BeanDefinitionStoreException {}
+```
+
+具体代码分步骤如下：
+
+* 校验beanDefinition instanceof AbstractBeanDefinition
+```java
+if (beanDefinition instanceof AbstractBeanDefinition) {
+	try {
+		((AbstractBeanDefinition) beanDefinition).validate();
+	}catch (BeanDefinitionValidationException ex) {
+		throw new BeanDefinitionStoreException(beanDefinition.getResourceDescription(), beanName,"Validation of bean definition failed", ex);
+	}
+}
+
+```
+* beanDefinitionMap 是否已经声明了bean
+
+  ```java
+  BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName); 
+  ```
+  * beanDefinitionMap已经声明了该bean
+    是否允许重写
+    ```java
+    if (!isAllowBeanDefinitionOverriding()) {
+				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
+			}
+    ```
+    一堆打印的日志
+    ```java
+    else if (existingDefinition.getRole() < beanDefinition.getRole()) {
+						// e.g. was ROLE_APPLICATION, now overriding with ROLE_SUPPORT or ROLE_INFRASTRUCTURE
+						if (logger.isInfoEnabled()) {
+							logger.info("Overriding user-defined bean definition for bean '" + beanName +
+									"' with a framework-generated bean definition: replacing [" +
+									existingDefinition + "] with [" + beanDefinition + "]");
+						}
+					}
+    			else if (!beanDefinition.equals(existingDefinition)) {
+    				if (logger.isDebugEnabled()) {
+    					logger.debug("Overriding bean definition for bean '" + beanName +
+    							"' with a different definition: replacing [" + existingDefinition +
+    							"] with [" + beanDefinition + "]");
+  				}
+    			}
+  			else {
+    				if (logger.isTraceEnabled()) {
+    					logger.trace("Overriding bean definition for bean '" + beanName +
+    							"' with an equivalent definition: replacing [" + existingDefinition +
+    							"] with [" + beanDefinition + "]");
+    				}
+    			}
+    ```
+    put（重要）：放入beanDefinitionMap（ConcurrentHashMap）中
+    ```java
+    this.beanDefinitionMap.put(beanName, beanDefinition);
+    ```
+    
+  * 未声明
+  
+    ```java
+    if (hasBeanCreationStarted()) {
+    	// Cannot modify startup-time collection elements anymore (for stable iteration)
+        synchronized (this.beanDefinitionMap) {
+            this.beanDefinitionMap.put(beanName, beanDefinition);
+            List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
+            updatedDefinitions.addAll(this.beanDefinitionNames);
+            updatedDefinitions.add(beanName);
+            this.beanDefinitionNames = updatedDefinitions;
+            removeManualSingletonName(beanName);
+        }
+    }
+    else {
+        // Still in startup registration phase
+        this.beanDefinitionMap.put(beanName, beanDefinition);
+        this.beanDefinitionNames.add(beanName);
+        removeManualSingletonName(beanName);
+    }
+    this.frozenBeanDefinitionNames = null;
+    }
+    ```
+* 单例
+```java
+if (existingDefinition != null || containsSingleton(beanName)) {
+  resetBeanDefinition(beanName);
+}
+```
+
+-----end----
 
 ### BeanDefinitionBuilder
 
 ## BeanFactory
 
 DefaultListableBeanFactory
+
+注册到IOC容器中的BeanFactory（extends AbstractAutowireCapableBeanFactory 
+implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable）
 
 ```java
 /** Resolver to use for checking if a bean definition is an autowire candidate. */
