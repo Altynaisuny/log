@@ -148,7 +148,42 @@ public Resource getResource(String location) {
 > 这是一个描述Bean的接口，包括了Bean的属性，构造参数，实例化的信息
 ### BeanDefinitionReader
 
+这是一个接口
+
+```java
+org.springframework.beans.factory.support.BeanDefinitionReader
+```
+
+有以下实现类
+
+* AbstractBeanDefinitionReader
+* GroovyBeanDefinitionReader
+* PropertiesBeanDefinitionReader
+* XmlBeanDefinitionReader
+
+以上实现类分别表示具体的reader过程，从几种途径来识别成为bean，这里就是一个识别的过程。
+
+此处只分析一下接口中的内容
+
+```java
+//Return the bean factory to register the bean definitions with.返回用来注册的beanFactory
+BeanDefinitionRegistry getRegistry();
+//Return the resource loader to use for resource locations.返回定位bean位置的ResourceLoader
+ResourceLoader getResourceLoader();
+//Return the class loader to use for bean classes.返回bean所在class的类加载器
+ClassLoader getBeanClassLoader();
+//Return the BeanNameGenerator to use for anonymous beans
+BeanNameGenerator getBeanNameGenerator();
+int loadBeanDefinitions(Resource resource) throws BeanDefinitionStoreException;
+int loadBeanDefinitions(Resource... resources) throws BeanDefinitionStoreException;
+int loadBeanDefinitions(String location) throws BeanDefinitionStoreException;
+int loadBeanDefinitions(String... locations) throws BeanDefinitionStoreException;
+```
+
+
+
 ### BeanDefinitionRegistry
+
 Bean的注册过程，接口org.springframework.beans.factory.support.BeanDefinitionRegistry：
 ```java
 void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
@@ -255,6 +290,68 @@ if (existingDefinition != null || containsSingleton(beanName)) {
 -----end----
 
 ### BeanDefinitionBuilder
+
+> 这是一个final class
+
+看下这个方法的构造，这里要求必须传入一个BeanDefinition
+```java
+/**
+ * Enforce the use of factory methods.
+ */
+private BeanDefinitionBuilder(AbstractBeanDefinition beanDefinition) {
+    this.beanDefinition = beanDefinition;
+}
+```
+
+builder 的过程主要是一些set过程
+
+包括：factoryMethod，initMethodName，destoryMethodName，scope，autowireMode，role，
+
+这里简单放一些源码：
+
+```java
+/**
+	 * Set the init method for this definition.
+	 */
+	public BeanDefinitionBuilder setInitMethodName(@Nullable String methodName) {
+		this.beanDefinition.setInitMethodName(methodName);
+		return this;
+	}
+
+	/**
+	 * Set the destroy method for this definition.
+	 */
+	public BeanDefinitionBuilder setDestroyMethodName(@Nullable String methodName) {
+		this.beanDefinition.setDestroyMethodName(methodName);
+		return this;
+	}
+/**
+	 * Set the scope of this definition.
+	 * @see org.springframework.beans.factory.config.BeanDefinition#SCOPE_SINGLETON
+	 * @see org.springframework.beans.factory.config.BeanDefinition#SCOPE_PROTOTYPE
+	 */
+	public BeanDefinitionBuilder setScope(@Nullable String scope) {
+		this.beanDefinition.setScope(scope);
+		return this;
+	}
+/**
+	 * Set whether or not this definition is abstract.
+	 */
+	public BeanDefinitionBuilder setAbstract(boolean flag) {
+		this.beanDefinition.setAbstract(flag);
+		return this;
+	}
+
+	/**
+	 * Set whether beans for this definition should be lazily initialized or not.
+	 */
+	public BeanDefinitionBuilder setLazyInit(boolean lazy) {
+		this.beanDefinition.setLazyInit(lazy);
+		return this;
+	}
+```
+
+
 
 ## BeanFactory
 
